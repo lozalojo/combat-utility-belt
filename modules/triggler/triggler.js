@@ -37,24 +37,15 @@ export class Triggler {
      * @param {*} target 
      */
     static async _executeTrigger(trigger, target) {
-        const tokens = target instanceof Token ? [target] : target instanceof Actor ? target.getActiveTokens() : null;
-
-        if (!tokens) {
-            return;
-        }
-
         const conditionMap = Sidekick.getSetting(SETTING_KEYS.enhancedConditions.map);
         const matchedApplyConditions = conditionMap.filter(m => m.applyTrigger === trigger.id);
         const matchedRemoveConditions = conditionMap.filter(m => m.removeTrigger === trigger.id);
         const matchedMacros = game.macros.entities.filter(m => m.getFlag(NAME, DEFAULT_CONFIG.triggler.flags.macro) === trigger.id);
+        const applyConditionNames = matchedApplyConditions.map(c => c.name);
+        const removeConditionNames = matchedRemoveConditions.map(c => c.name);
 
-        for (const condition of matchedApplyConditions) {
-            await EnhancedConditions.applyCondition(condition.name, tokens, {warn: false});
-        }
-
-        for (const condition of matchedRemoveConditions) {
-            await EnhancedConditions.removeCondition(condition.name, tokens, {warn: false});
-        }
+        if (applyConditionNames.length) await EnhancedConditions.addCondition(applyConditionNames, target, {warn: false});
+        if (removeConditionNames.length) await EnhancedConditions.removeCondition(removeConditionNames, target, {warn: false});
 
         for (const macro of matchedMacros) {
             await macro.execute();
@@ -80,7 +71,7 @@ export class Triggler {
             return;
         }
 
-        const isPC = !!(entityType === "Actor" ? entity.isPC : entityType === "Token" ? entity.actor.isPC : null);
+        const hasPlayerOwner = !!(entityType === "Actor" ? entity.hasPlayerOwner : entityType === "Token" ? entity.actor.hasPlayerOwner : null);
 
         /**
          * process each trigger in turn, checking for a match in the update payload,
@@ -93,11 +84,11 @@ export class Triggler {
             const npcOnly = trigger.npcOnly;
             const notZero = trigger.notZero;
 
-            if (pcOnly && !isPC) {
+            if (pcOnly && !hasPlayerOwner) {
                 continue;
             }
 
-            if (npcOnly && isPC) {
+            if (npcOnly && hasPlayerOwner) {
                 continue;
             }
 

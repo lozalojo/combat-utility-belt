@@ -82,7 +82,7 @@ export class HideNPCNames {
         const npcs = tokens.filter(t => {
             const actor = t.actor || game.actors.entities.find(a => a.id === t.actorId);
             
-            if (actor.isPC === false) return true;
+            if (actor.hasPlayerOwner === false) return true;
         });
 
         if (!npcs.length) return;
@@ -131,18 +131,19 @@ export class HideNPCNames {
     static _hookOnRenderChatMessage(message, html, data) {
         const enable = Sidekick.getSetting(SETTING_KEYS.hideNames.enable);
 
-        if (!enable) {
-            return;
-        }
+        if (!enable) return;
 
         const messageActorId = message.data.speaker.actor;
         const messageSceneId = message.data.speaker.scene;
         const messageTokenId = message.data.speaker.token;
         const scene = messageSceneId ? game.scenes.get(messageSceneId) : null;
         const tokenData = scene ? scene.data.tokens.find(t => t._id === messageTokenId) : null;
-        const token = canvas.tokens.get(messageTokenId) ?? (tokenData ? new Token(tokenData) : null);
-        const actor = token ? token.actor : game.actors.get(messageActorId);
-        const speakerIsNPC = actor && !actor.isPC;
+        const token = canvas?.tokens.get(messageTokenId) ?? (tokenData ? new Token(tokenData) : null);
+        const actor = token ? token.actor : messageActorId ? game.actors.get(messageActorId) : null;
+
+        if (!actor) return;
+        
+        const speakerIsNPC = actor && !actor.hasPlayerOwner;
 
         if (!speakerIsNPC) return;
 
@@ -192,7 +193,7 @@ export class HideNPCNames {
         const tokenData = scene ? scene.data.tokens.find(t => t._id === messageTokenId) : null;
         const token = canvas.tokens.get(messageTokenId) ?? (tokenData ? new Token(tokenData) : null);
         const actor = token ? token.actor : game.actors.get(messageActorId);
-        const speakerIsNPC = actor && !actor.isPC;
+        const speakerIsNPC = actor && !actor.hasPlayerOwner;
 
         if (!speakerIsNPC) return;
 
@@ -222,7 +223,7 @@ export class HideNPCNames {
 
         const shouldReplace = HideNPCNames.shouldReplaceName(actor);
 
-        if (actor.isPC || !shouldReplace) return;
+        if (actor.hasPlayerOwner || !shouldReplace) return;
 
         const windowTitle = html.find(".window-title");
 
